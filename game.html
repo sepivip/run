@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-bit Sneaker Runner</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            border: 2px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GAME_SPEED = 3;
+        const GRAVITY = 0.4;
+        const JUMP_FORCE = 13;
+        const GROUND_HEIGHT = 60;
+        const SNEAKER_SIZE = 30;
+
+        let player = {
+            x: 350,
+            y: canvas.height - GROUND_HEIGHT - SNEAKER_SIZE,
+            width: SNEAKER_SIZE,
+            height: SNEAKER_SIZE,
+            dy: 0,
+            jumpCount: 0
+        };
+
+        let obstacles = [];
+        let sneakers = [];
+        let score = 0;
+        let direction = 1; // 1 for right, -1 for left
+
+        function drawPlayer() {
+            ctx.fillStyle = '#00f';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawGround() {
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#f00';
+            obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function drawSneakers() {
+            ctx.fillStyle = '#ff0';
+            sneakers.forEach(sneaker => {
+                ctx.fillRect(sneaker.x, sneaker.y, sneaker.width, sneaker.height);
+            });
+        }
+
+        function drawScore() {
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 30);
+        }
+
+        function update() {
+            // Player movement
+            player.y += player.dy;
+            player.dy += GRAVITY;
+
+            if (player.y > canvas.height - GROUND_HEIGHT - player.height) {
+                player.y = canvas.height - GROUND_HEIGHT - player.height;
+                player.dy = 0;
+                player.jumpCount = 0;
+            }
+
+            // Move obstacles and sneakers
+            obstacles.forEach(obstacle => {
+                obstacle.x -= GAME_SPEED * direction;
+            });
+
+            sneakers.forEach(sneaker => {
+                sneaker.x -= GAME_SPEED * direction;
+            });
+
+            // Remove off-screen obstacles and sneakers
+            obstacles = obstacles.filter(obstacle => 
+                (direction === 1 && obstacle.x + obstacle.width > 0) || 
+                (direction === -1 && obstacle.x < canvas.width)
+            );
+
+            sneakers = sneakers.filter(sneaker => 
+                (direction === 1 && sneaker.x + sneaker.width > 0) || 
+                (direction === -1 && sneaker.x < canvas.width)
+            );
+
+            // Collision detection
+            obstacles.forEach(obstacle => {
+                if (
+                    player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y
+                ) {
+                    // Game over logic here
+                    alert('Game Over! Your score: ' + score);
+                    resetGame();
+                }
+            });
+
+            sneakers.forEach((sneaker, index) => {
+                if (
+                    player.x < sneaker.x + sneaker.width &&
+                    player.x + player.width > sneaker.x &&
+                    player.y < sneaker.y + sneaker.height &&
+                    player.y + player.height > sneaker.y
+                ) {
+                    // Collect sneaker
+                    sneakers.splice(index, 1);
+                    score += 10;
+
+                    // 50% chance to reverse direction
+                    if (Math.random() < 0.5) {
+                        direction *= -1;
+                    }
+                }
+            });
+
+            // Spawn new obstacles and sneakers
+            if (Math.random() < 0.01) {
+                const obstacle = {
+                    x: direction === 1 ? canvas.width : -30,
+                    y: canvas.height - GROUND_HEIGHT - 30,
+                    width: 20,
+                    height: 50
+                };
+                obstacles.push(obstacle);
+            }
+
+            if (Math.random() < 0.005) {
+                const sneaker = {
+                    x: direction === 1 ? canvas.width : -SNEAKER_SIZE,
+                    y: canvas.height - GROUND_HEIGHT - SNEAKER_SIZE - Math.random() * 100,
+                    width: SNEAKER_SIZE,
+                    height: SNEAKER_SIZE
+                };
+                sneakers.push(sneaker);
+            }
+
+            score++;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGround();
+            drawPlayer();
+            drawObstacles();
+            drawSneakers();
+            drawScore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            player.y = canvas.height - GROUND_HEIGHT - SNEAKER_SIZE;
+            player.dy = 0;
+            player.jumpCount = 0;
+            obstacles = [];
+            sneakers = [];
+            score = 0;
+            direction = 1;
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && player.jumpCount < 3) {
+                player.dy = -JUMP_FORCE;
+                player.jumpCount++;
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
